@@ -66,4 +66,10 @@ class NoteRepositoryTest {
         assertTrue(noteRepository.findByIdAndUserId(note.getId(), navya.getId()).isPresent());
         assertTrue(noteRepository.findByIdAndUserId(note.getId(), other.getId()).isEmpty());
     }
+
+    @Test
+    void testFindTrashedNotesBeforeCutoff() {
+        assertEquals(1, noteRepository.findByTrashedTrueAndUpdatedAtBefore(java.time.LocalDateTime.now().plusMinutes(1)).size());
+        assertTrue(noteRepository.findByTrashedTrueAndUpdatedAtBefore(java.time.LocalDateTime.now().minusDays(1)).isEmpty());
+    }
 }
