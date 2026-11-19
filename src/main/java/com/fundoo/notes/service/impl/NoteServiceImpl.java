@@ -11,6 +11,8 @@ import com.fundoo.notes.repository.UserRepository;
 import com.fundoo.notes.service.NoteService;
 import com.fundoo.notes.service.TokenService;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +28,8 @@ import java.util.List;
 @Transactional
 public class NoteServiceImpl implements NoteService {
 
+    private static final Logger log = LoggerFactory.getLogger(NoteServiceImpl.class);
+
     private final NoteRepository noteRepository;
     private final UserRepository userRepository;
     private final TokenService tokenService;
@@ -39,14 +43,18 @@ public class NoteServiceImpl implements NoteService {
     @Override
     public NoteResponseDto createNote(NoteRequestDto requestDto, String token) {
         User user = findUserFromToken(token);
-        Note note = new Note(requestDto.getTitle().trim(), requestDto.getDescription(), user);
-        return mapToResponse(noteRepository.save(note));
+        log.info("Creating note for user id: {}", user.getId());
+        log.debug("Note title: {}", requestDto.getTitle());
+        Note savedNote = noteRepository.save(new Note(requestDto.getTitle().trim(), requestDto.getDescription(), user));
+        log.info("Note created with id: {}", savedNote.getId());
+        return mapToResponse(savedNote);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<NoteResponseDto> getAllNotes(String token) {
         Long userId = findUserFromToken(token).getId();
+        log.info("Fetching notes for user id: {}", userId);
         // pinned notes first, then the most recently created
         return noteRepository.findByUserIdAndArchivedFalseAndTrashedFalse(userId).stream()
                 .sorted(Comparator.comparing(Note::isPinned).reversed()
@@ -59,9 +67,11 @@ public class NoteServiceImpl implements NoteService {
     public NoteResponseDto pinNote(Long noteId, String token) {
         Note note = findOwnedNote(noteId, token);
         if (note.isTrashed()) {
+            log.warn("Pin rejected, note id: {} is in trash", noteId);
             throw new IllegalArgumentException("A note in trash cannot be pinned");
         }
         note.setPinned(!note.isPinned());
+        log.info("Note id: {} pinned: {}", noteId, note.isPinned());
         return mapToResponse(noteRepository.save(note));
     }
 
@@ -69,9 +79,11 @@ public class NoteServiceImpl implements NoteService {
     public NoteResponseDto archiveNote(Long noteId, String token) {
         Note note = findOwnedNote(noteId, token);
         if (note.isTrashed()) {
+            log.warn("Archive rejected, note id: {} is in trash", noteId);
             throw new IllegalArgumentException("A note in trash cannot be archived");
         }
         note.setArchived(!note.isArchived());
+        log.info("Note id: {} archived: {}", noteId, note.isArchived());
         // archived notes are not shown as pinned on the dashboard
         if (note.isArchived()) {
             note.setPinned(false);
@@ -83,6 +95,7 @@ public class NoteServiceImpl implements NoteService {
     public NoteResponseDto trashNote(Long noteId, String token) {
         Note note = findOwnedNote(noteId, token);
         note.setTrashed(!note.isTrashed());
+        log.info("Note id: {} trashed: {}", noteId, note.isTrashed());
         if (note.isTrashed()) {
             note.setPinned(false);
         }
@@ -99,8 +112,10 @@ public class NoteServiceImpl implements NoteService {
     // a note owned by somebody else is reported as not found
     private Note findOwnedNote(Long noteId, String token) {
         Long userId = findUserFromToken(token).getId();
-        return noteRepository.findByIdAndUserId(noteId, userId)
-                .orElseThrow(() -> new NoteNotFoundException(noteId));
+        return noteRepository.findByIdAndUserId(noteId, userId).orElseThrow(() -> {
+            log.warn("Note id: {} not found for user id: {}", noteId, userId);
+            return new NoteNotFoundException(noteId);
+        });
     }
 
     private NoteResponseDto mapToResponse(Note note) {

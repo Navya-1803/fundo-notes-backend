@@ -5,6 +5,8 @@ import com.fundoo.notes.dto.response.NoteResponseDto;
 import com.fundoo.notes.service.NoteService;
 
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +30,8 @@ import java.util.List;
 @RequestMapping("/api/notes")
 public class NoteController {
 
+    private static final Logger log = LoggerFactory.getLogger(NoteController.class);
+
     private final NoteService noteService;
 
     public NoteController(NoteService noteService) {
@@ -37,27 +41,32 @@ public class NoteController {
     @PostMapping
     public ResponseEntity<NoteResponseDto> createNote(@Valid @RequestBody NoteRequestDto requestDto,
                                                       @RequestHeader("Authorization") String token) {
+        log.debug("POST /api/notes");
         return ResponseEntity.status(HttpStatus.CREATED).body(noteService.createNote(requestDto, token));
     }
 
     @GetMapping
     public ResponseEntity<List<NoteResponseDto>> getAllNotes(@RequestHeader("Authorization") String token) {
+        log.debug("GET /api/notes");
         return ResponseEntity.ok(noteService.getAllNotes(token));
     }
 
     // pin, archive and trash toggle the current state of the note
     @PatchMapping("/{noteId}/pin")
     public ResponseEntity<NoteResponseDto> pinNote(@PathVariable Long noteId, @RequestHeader("Authorization") String token) {
+        log.debug("PATCH /api/notes/{}/pin", noteId);
         return ResponseEntity.ok(noteService.pinNote(noteId, token));
     }
 
     @PatchMapping("/{noteId}/archive")
     public ResponseEntity<NoteResponseDto> archiveNote(@PathVariable Long noteId, @RequestHeader("Authorization") String token) {
+        log.debug("PATCH /api/notes/{}/archive", noteId);
         return ResponseEntity.ok(noteService.archiveNote(noteId, token));
     }
 
     @PatchMapping("/{noteId}/trash")
     public ResponseEntity<NoteResponseDto> trashNote(@PathVariable Long noteId, @RequestHeader("Authorization") String token) {
+        log.debug("PATCH /api/notes/{}/trash", noteId);
         return ResponseEntity.ok(noteService.trashNote(noteId, token));
     }
 }
