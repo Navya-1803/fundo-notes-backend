@@ -38,4 +38,11 @@ class GlobalExceptionHandlerTest {
         assertEquals(500, response.getStatusCode().value());
         assertFalse(response.getBody().getMessage().contains("line 42"));
     }
+
+    @Test
+    void testNoteNotFound_Returns404() {
+        ResponseEntity<ApiErrorResponseDto> response = handler.handleNoteNotFound(new NoteNotFoundException(7L), request);
+        assertEquals(404, response.getStatusCode().value());
+        assertEquals("Note not found with id: 7", response.getBody().getMessage());
+    }
 }
