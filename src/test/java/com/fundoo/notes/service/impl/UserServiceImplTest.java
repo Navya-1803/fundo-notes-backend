@@ -5,6 +5,8 @@ import com.fundoo.notes.dto.request.UserRegisterRequestDto;
 import com.fundoo.notes.dto.response.LoginResponseDto;
 import com.fundoo.notes.dto.response.UserResponseDto;
 import com.fundoo.notes.entity.User;
+import com.fundoo.notes.exception.DuplicateEmailException;
+import com.fundoo.notes.exception.InvalidCredentialsException;
 import com.fundoo.notes.repository.UserRepository;
 import com.fundoo.notes.service.PasswordService;
 import com.fundoo.notes.service.TokenService;
@@ -79,7 +81,7 @@ class UserServiceImplTest {
     @Test
     void testRegister_DuplicateEmail() {
         when(userRepository.existsByEmail("navya@example.com")).thenReturn(true);
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(DuplicateEmailException.class,
                 () -> userService.register(new UserRegisterRequestDto("Navya", "Raj", "navya@example.com", "secret123")));
         verify(userRepository, never()).save(any());
     }
@@ -96,13 +98,13 @@ class UserServiceImplTest {
     @Test
     void testLogin_UnknownEmail() {
         when(userRepository.findByEmail(any())).thenReturn(Optional.empty());
-        assertThrows(IllegalArgumentException.class, () -> userService.login(new LoginRequestDto("x@example.com", "secret123")));
+        assertThrows(InvalidCredentialsException.class, () -> userService.login(new LoginRequestDto("x@example.com", "secret123")));
     }
 
     @Test
     void testLogin_WrongPassword() {
         when(userRepository.findByEmail("navya@example.com")).thenReturn(Optional.of(storedUser()));
-        assertThrows(IllegalArgumentException.class, () -> userService.login(new LoginRequestDto("navya@example.com", "wrong123")));
+        assertThrows(InvalidCredentialsException.class, () -> userService.login(new LoginRequestDto("navya@example.com", "wrong123")));
         verify(tokenService, never()).generateToken(any());
     }
 }

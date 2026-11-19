@@ -13,7 +13,7 @@ public interface TokenService {
 
     /**
      * @return id of the user the token belongs to
-     * @throws IllegalArgumentException if the token is missing, invalid or expired
+     * @throws com.fundoo.notes.exception.InvalidCredentialsException if the token is missing, invalid or expired
      */
     Long extractUserId(String token);
 

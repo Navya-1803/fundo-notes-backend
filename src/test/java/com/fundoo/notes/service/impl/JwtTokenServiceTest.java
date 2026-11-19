@@ -1,6 +1,7 @@
 package com.fundoo.notes.service.impl;
 
 import com.fundoo.notes.entity.User;
+import com.fundoo.notes.exception.InvalidCredentialsException;
 
 import org.junit.jupiter.api.Test;
 
@@ -37,7 +38,7 @@ class JwtTokenServiceTest {
         String token = tokenService.generateToken(user());
         String tampered = token.substring(0, token.length() - 2) + "xx";
         assertFalse(tokenService.isTokenValid(tampered));
-        assertThrows(IllegalArgumentException.class, () -> tokenService.extractUserId(tampered));
+        assertThrows(InvalidCredentialsException.class, () -> tokenService.extractUserId(tampered));
     }
 
     @Test
@@ -54,8 +55,8 @@ class JwtTokenServiceTest {
 
     @Test
     void testMissingToken_IsRejected() {
-        assertThrows(IllegalArgumentException.class, () -> tokenService.extractUserId(null));
-        assertThrows(IllegalArgumentException.class, () -> tokenService.extractUserId(" "));
+        assertThrows(InvalidCredentialsException.class, () -> tokenService.extractUserId(null));
+        assertThrows(InvalidCredentialsException.class, () -> tokenService.extractUserId(" "));
     }
 
     @Test
