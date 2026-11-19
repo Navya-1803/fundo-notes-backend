@@ -5,6 +5,7 @@ import com.fundoo.notes.event.ReminderEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -12,7 +13,9 @@ import org.springframework.stereotype.Component;
  *
  * @author Navya Raj
  */
+// listeners can be switched off, for example in tests where no broker is running
 @Component
+@ConditionalOnProperty(name = "app.messaging.listeners-enabled", havingValue = "true", matchIfMissing = true)
 public class RabbitMQReminderConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(RabbitMQReminderConsumer.class);
