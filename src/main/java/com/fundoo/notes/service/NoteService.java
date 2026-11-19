@@ -17,6 +17,8 @@ public interface NoteService {
 
     List<NoteResponseDto> getAllNotes(String token);
 
+    NoteResponseDto getNoteById(Long noteId, String token);
+
     NoteResponseDto pinNote(Long noteId, String token);
 
     NoteResponseDto archiveNote(Long noteId, String token);

@@ -128,4 +128,10 @@ class NoteServiceImplTest {
         assertThrows(NoteNotFoundException.class, () -> noteService.trashNote(9L, TOKEN));
         assertTrue(output.getOut().contains("Note id: 9 not found for user id: 1"));
     }
+
+    @Test
+    void testGetNoteById() {
+        when(noteRepository.findByIdAndUserId(5L, 1L)).thenReturn(Optional.of(note(5L)));
+        assertEquals("Title 5", noteService.getNoteById(5L, TOKEN).getTitle());
+    }
 }
