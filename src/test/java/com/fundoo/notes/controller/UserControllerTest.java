@@ -51,10 +51,11 @@ class UserControllerTest {
 
     @Test
     void testLogin_Returns200() throws Exception {
-        when(userService.login(any())).thenReturn(new LoginResponseDto(null, "Login successful"));
+        when(userService.login(any())).thenReturn(new LoginResponseDto("jwt-token", "Login successful"));
         mockMvc.perform(post("/api/users/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\": \"navya@example.com\", \"password\": \"secret123\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Login successful"));
+                .andExpect(jsonPath("$.message").value("Login successful"))
+                .andExpect(jsonPath("$.token").value("jwt-token"));
     }
 }

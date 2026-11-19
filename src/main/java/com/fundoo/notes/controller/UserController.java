@@ -15,7 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * REST endpoints for user registration and login.
+ * REST endpoints for user registration and login. Login returns a JWT
+ * which the client sends in the Authorization header of later requests.
  *
  * @author Navya Raj
  */
