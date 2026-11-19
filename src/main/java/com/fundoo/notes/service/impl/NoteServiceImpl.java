@@ -64,6 +64,13 @@ public class NoteServiceImpl implements NoteService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public NoteResponseDto getNoteById(Long noteId, String token) {
+        log.info("Fetching note id: {}", noteId);
+        return mapToResponse(findOwnedNote(noteId, token));
+    }
+
+    @Override
     public NoteResponseDto pinNote(Long noteId, String token) {
         Note note = findOwnedNote(noteId, token);
         if (note.isTrashed()) {
