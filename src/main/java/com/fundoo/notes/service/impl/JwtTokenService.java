@@ -1,6 +1,7 @@
 package com.fundoo.notes.service.impl;
 
 import com.fundoo.notes.entity.User;
+import com.fundoo.notes.exception.InvalidCredentialsException;
 import com.fundoo.notes.service.TokenService;
 
 import io.jsonwebtoken.Claims;
@@ -67,7 +68,7 @@ public class JwtTokenService implements TokenService {
         try {
             parseClaims(token);
             return true;
-        } catch (IllegalArgumentException e) {
+        } catch (InvalidCredentialsException e) {
             return false;
         }
     }
@@ -75,13 +76,13 @@ public class JwtTokenService implements TokenService {
     // verifies the signature and expiry, accepts tokens with or without the "Bearer " prefix
     private Claims parseClaims(String token) {
         if (token == null || token.isBlank()) {
-            throw new IllegalArgumentException("Token is missing");
+            throw new InvalidCredentialsException("Authorization token is missing");
         }
         String rawToken = token.startsWith(BEARER_PREFIX) ? token.substring(BEARER_PREFIX.length()) : token;
         try {
             return Jwts.parser().verifyWith(signingKey).build().parseSignedClaims(rawToken.trim()).getPayload();
         } catch (JwtException | IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid or expired token", e);
+            throw new InvalidCredentialsException("Invalid or expired token", e);
         }
     }
 }

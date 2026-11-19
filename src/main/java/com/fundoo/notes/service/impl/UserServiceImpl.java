@@ -5,6 +5,8 @@ import com.fundoo.notes.dto.request.UserRegisterRequestDto;
 import com.fundoo.notes.dto.response.LoginResponseDto;
 import com.fundoo.notes.dto.response.UserResponseDto;
 import com.fundoo.notes.entity.User;
+import com.fundoo.notes.exception.DuplicateEmailException;
+import com.fundoo.notes.exception.InvalidCredentialsException;
 import com.fundoo.notes.repository.UserRepository;
 import com.fundoo.notes.service.PasswordService;
 import com.fundoo.notes.service.TokenService;
@@ -35,7 +37,7 @@ public class UserServiceImpl implements UserService {
         // emails are stored in lower case so the same address cannot register twice
         String email = requestDto.getEmail().trim().toLowerCase();
         if (userRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("Email already registered");
+            throw new DuplicateEmailException("Email already registered: " + email);
         }
         // only the BCrypt hash of the password is stored
         String encodedPassword = passwordService.encode(requestDto.getPassword());
@@ -47,9 +49,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public LoginResponseDto login(LoginRequestDto requestDto) {
         User user = userRepository.findByEmail(requestDto.getEmail().trim().toLowerCase())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
         if (!passwordService.matches(requestDto.getPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("Invalid email or password");
+            throw new InvalidCredentialsException("Invalid email or password");
         }
         String token = tokenService.generateToken(user);
         return new LoginResponseDto(token, "Login successful");
