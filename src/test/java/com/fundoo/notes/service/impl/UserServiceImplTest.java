@@ -5,11 +5,13 @@ import com.fundoo.notes.dto.request.UserRegisterRequestDto;
 import com.fundoo.notes.dto.response.LoginResponseDto;
 import com.fundoo.notes.dto.response.UserResponseDto;
 import com.fundoo.notes.entity.User;
+import com.fundoo.notes.event.UserRegistrationEvent;
 import com.fundoo.notes.exception.DuplicateEmailException;
 import com.fundoo.notes.exception.InvalidCredentialsException;
 import com.fundoo.notes.repository.UserRepository;
 import com.fundoo.notes.service.PasswordService;
 import com.fundoo.notes.service.TokenService;
+import com.fundoo.notes.service.UserRegistrationEventPublisher;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,7 @@ class UserServiceImplTest {
     private UserRepository userRepository;
     private PasswordService passwordService;
     private TokenService tokenService;
+    private UserRegistrationEventPublisher eventPublisher;
     private UserServiceImpl userService;
 
     @BeforeEach
@@ -37,7 +40,8 @@ class UserServiceImplTest {
         userRepository = mock(UserRepository.class);
         passwordService = mock(PasswordService.class);
         tokenService = mock(TokenService.class);
-        userService = new UserServiceImpl(userRepository, passwordService, tokenService);
+        eventPublisher = mock(UserRegistrationEventPublisher.class);
+        userService = new UserServiceImpl(userRepository, passwordService, tokenService, eventPublisher);
         when(passwordService.encode(any())).thenAnswer(invocation -> "hashed-" + invocation.getArgument(0));
         when(passwordService.matches(any(), any())).thenAnswer(invocation ->
                 ("hashed-" + invocation.getArgument(0)).equals(invocation.getArgument(1)));
@@ -88,6 +92,7 @@ class UserServiceImplTest {
         assertThrows(DuplicateEmailException.class,
                 () -> userService.register(new UserRegisterRequestDto("Navya", "Raj", "navya@example.com", "secret123")));
         verify(userRepository, never()).save(any());
+        verify(eventPublisher, never()).publish(any());
     }
 
     @Test
@@ -124,5 +129,19 @@ class UserServiceImplTest {
         assertTrue(output.getOut().contains("User registered successfully with id: 11"));
         // the raw password must never be logged
         assertFalse(output.getOut().contains("secret123"));
+    }
+
+    @Test
+    void testRegister_PublishesRegistrationEvent() {
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User saved = invocation.getArgument(0);
+            saved.setId(3L);
+            return saved;
+        });
+        userService.register(new UserRegisterRequestDto("Navya", "Raj", "navya@example.com", "secret123"));
+        ArgumentCaptor<UserRegistrationEvent> captor = ArgumentCaptor.forClass(UserRegistrationEvent.class);
+        verify(eventPublisher).publish(captor.capture());
+        assertEquals(3L, captor.getValue().getUserId());
+        assertEquals("navya@example.com", captor.getValue().getEmail());
     }
 }

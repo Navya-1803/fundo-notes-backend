@@ -5,11 +5,13 @@ import com.fundoo.notes.dto.request.UserRegisterRequestDto;
 import com.fundoo.notes.dto.response.LoginResponseDto;
 import com.fundoo.notes.dto.response.UserResponseDto;
 import com.fundoo.notes.entity.User;
+import com.fundoo.notes.event.UserRegistrationEvent;
 import com.fundoo.notes.exception.DuplicateEmailException;
 import com.fundoo.notes.exception.InvalidCredentialsException;
 import com.fundoo.notes.repository.UserRepository;
 import com.fundoo.notes.service.PasswordService;
 import com.fundoo.notes.service.TokenService;
+import com.fundoo.notes.service.UserRegistrationEventPublisher;
 import com.fundoo.notes.service.UserService;
 
 import org.slf4j.Logger;
@@ -29,11 +31,14 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordService passwordService;
     private final TokenService tokenService;
+    private final UserRegistrationEventPublisher eventPublisher;
 
-    public UserServiceImpl(UserRepository userRepository, PasswordService passwordService, TokenService tokenService) {
+    public UserServiceImpl(UserRepository userRepository, PasswordService passwordService, TokenService tokenService,
+                           UserRegistrationEventPublisher eventPublisher) {
         this.userRepository = userRepository;
         this.passwordService = passwordService;
         this.tokenService = tokenService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -50,6 +55,8 @@ public class UserServiceImpl implements UserService {
         User user = new User(requestDto.getFirstName().trim(), requestDto.getLastName(), email, encodedPassword);
         User savedUser = userRepository.save(user);
         log.info("User registered successfully with id: {}", savedUser.getId());
+        // the welcome email is sent asynchronously through JMS
+        eventPublisher.publish(new UserRegistrationEvent(savedUser.getId(), savedUser.getEmail(), savedUser.getFirstName()));
         return mapToUserResponse(savedUser);
     }
 
