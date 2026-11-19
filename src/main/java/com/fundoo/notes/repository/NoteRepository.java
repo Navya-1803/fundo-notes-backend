@@ -5,6 +5,7 @@ import com.fundoo.notes.entity.Note;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,4 +30,7 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
     List<Note> findByUserIdAndTitleContainingIgnoreCase(Long userId, String keyword);
 
     Optional<Note> findByIdAndUserId(Long id, Long userId);
+
+    // trashed notes not touched since the given time, used by the cleanup batch job
+    List<Note> findByTrashedTrueAndUpdatedAtBefore(LocalDateTime cutoff);
 }
