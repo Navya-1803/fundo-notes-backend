@@ -6,6 +6,8 @@ import com.fundoo.notes.dto.response.LoginResponseDto;
 import com.fundoo.notes.dto.response.UserResponseDto;
 import com.fundoo.notes.entity.User;
 import com.fundoo.notes.repository.UserRepository;
+import com.fundoo.notes.service.PasswordService;
+import com.fundoo.notes.service.TokenService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,16 +22,23 @@ import static org.mockito.Mockito.*;
 class UserServiceImplTest {
 
     private UserRepository userRepository;
+    private PasswordService passwordService;
+    private TokenService tokenService;
     private UserServiceImpl userService;
 
     @BeforeEach
     void setUp() {
         userRepository = mock(UserRepository.class);
-        userService = new UserServiceImpl(userRepository);
+        passwordService = mock(PasswordService.class);
+        tokenService = mock(TokenService.class);
+        userService = new UserServiceImpl(userRepository, passwordService, tokenService);
+        when(passwordService.encode(any())).thenAnswer(invocation -> "hashed-" + invocation.getArgument(0));
+        when(passwordService.matches(any(), any())).thenAnswer(invocation ->
+                ("hashed-" + invocation.getArgument(0)).equals(invocation.getArgument(1)));
     }
 
     private User storedUser() {
-        User user = new User("Navya", "Raj", "navya@example.com", "secret123");
+        User user = new User("Navya", "Raj", "navya@example.com", "hashed-secret123");
         user.setId(1L);
         return user;
     }
@@ -59,6 +68,15 @@ class UserServiceImplTest {
     }
 
     @Test
+    void testRegister_StoresEncodedPassword() {
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        userService.register(new UserRegisterRequestDto("Navya", "Raj", "navya@example.com", "secret123"));
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(captor.capture());
+        assertEquals("hashed-secret123", captor.getValue().getPassword());
+    }
+
+    @Test
     void testRegister_DuplicateEmail() {
         when(userRepository.existsByEmail("navya@example.com")).thenReturn(true);
         assertThrows(IllegalArgumentException.class,
@@ -69,8 +87,10 @@ class UserServiceImplTest {
     @Test
     void testLogin_Success() {
         when(userRepository.findByEmail("navya@example.com")).thenReturn(Optional.of(storedUser()));
+        when(tokenService.generateToken(any(User.class))).thenReturn("jwt-token");
         LoginResponseDto response = userService.login(new LoginRequestDto("navya@example.com", "secret123"));
         assertEquals("Login successful", response.getMessage());
+        assertEquals("jwt-token", response.getToken());
     }
 
     @Test
@@ -83,5 +103,6 @@ class UserServiceImplTest {
     void testLogin_WrongPassword() {
         when(userRepository.findByEmail("navya@example.com")).thenReturn(Optional.of(storedUser()));
         assertThrows(IllegalArgumentException.class, () -> userService.login(new LoginRequestDto("navya@example.com", "wrong123")));
+        verify(tokenService, never()).generateToken(any());
     }
 }
