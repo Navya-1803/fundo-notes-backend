@@ -12,6 +12,9 @@ import com.fundoo.notes.service.TokenService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(OutputCaptureExtension.class)
 class NoteServiceImplTest {
 
     private static final String TOKEN = "Bearer token";
@@ -116,5 +120,12 @@ class NoteServiceImplTest {
     void testDeletedUser_Rejected() {
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
         assertThrows(InvalidCredentialsException.class, () -> noteService.getAllNotes(TOKEN));
+    }
+
+    @Test
+    void testNoteNotFound_LogsWarning(CapturedOutput output) {
+        when(noteRepository.findByIdAndUserId(9L, 1L)).thenReturn(Optional.empty());
+        assertThrows(NoteNotFoundException.class, () -> noteService.trashNote(9L, TOKEN));
+        assertTrue(output.getOut().contains("Note id: 9 not found for user id: 1"));
     }
 }

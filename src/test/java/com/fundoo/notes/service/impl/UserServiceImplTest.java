@@ -13,6 +13,9 @@ import com.fundoo.notes.service.TokenService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.mockito.ArgumentCaptor;
 
 import java.util.Optional;
@@ -21,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(OutputCaptureExtension.class)
 class UserServiceImplTest {
 
     private UserRepository userRepository;
@@ -106,5 +110,19 @@ class UserServiceImplTest {
         when(userRepository.findByEmail("navya@example.com")).thenReturn(Optional.of(storedUser()));
         assertThrows(InvalidCredentialsException.class, () -> userService.login(new LoginRequestDto("navya@example.com", "wrong123")));
         verify(tokenService, never()).generateToken(any());
+    }
+
+    @Test
+    void testRegister_WritesLogs(CapturedOutput output) {
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User saved = invocation.getArgument(0);
+            saved.setId(11L);
+            return saved;
+        });
+        userService.register(new UserRegisterRequestDto("Navya", "Raj", "navya@example.com", "secret123"));
+        assertTrue(output.getOut().contains("Registration request received for email: navya@example.com"));
+        assertTrue(output.getOut().contains("User registered successfully with id: 11"));
+        // the raw password must never be logged
+        assertFalse(output.getOut().contains("secret123"));
     }
 }

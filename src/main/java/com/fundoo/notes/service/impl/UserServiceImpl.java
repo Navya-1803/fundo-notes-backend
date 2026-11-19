@@ -12,6 +12,8 @@ import com.fundoo.notes.service.PasswordService;
 import com.fundoo.notes.service.TokenService;
 import com.fundoo.notes.service.UserService;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
@@ -21,6 +23,8 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class UserServiceImpl implements UserService {
+
+    private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
 
     private final UserRepository userRepository;
     private final PasswordService passwordService;
@@ -36,24 +40,33 @@ public class UserServiceImpl implements UserService {
     public UserResponseDto register(UserRegisterRequestDto requestDto) {
         // emails are stored in lower case so the same address cannot register twice
         String email = requestDto.getEmail().trim().toLowerCase();
+        log.info("Registration request received for email: {}", email);
         if (userRepository.existsByEmail(email)) {
+            log.warn("Registration rejected, email already registered: {}", email);
             throw new DuplicateEmailException("Email already registered: " + email);
         }
         // only the BCrypt hash of the password is stored
         String encodedPassword = passwordService.encode(requestDto.getPassword());
         User user = new User(requestDto.getFirstName().trim(), requestDto.getLastName(), email, encodedPassword);
         User savedUser = userRepository.save(user);
+        log.info("User registered successfully with id: {}", savedUser.getId());
         return mapToUserResponse(savedUser);
     }
 
     @Override
     public LoginResponseDto login(LoginRequestDto requestDto) {
-        User user = userRepository.findByEmail(requestDto.getEmail().trim().toLowerCase())
-                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
+        String email = requestDto.getEmail().trim().toLowerCase();
+        log.info("Login attempt for email: {}", email);
+        User user = userRepository.findByEmail(email).orElseThrow(() -> {
+            log.warn("Login failed, no account for email: {}", email);
+            return new InvalidCredentialsException("Invalid email or password");
+        });
         if (!passwordService.matches(requestDto.getPassword(), user.getPassword())) {
+            log.warn("Login failed, wrong password for user id: {}", user.getId());
             throw new InvalidCredentialsException("Invalid email or password");
         }
         String token = tokenService.generateToken(user);
+        log.info("Login successful for user id: {}", user.getId());
         return new LoginResponseDto(token, "Login successful");
     }
 

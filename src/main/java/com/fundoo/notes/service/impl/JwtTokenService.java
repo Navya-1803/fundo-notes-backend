@@ -8,6 +8,8 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +26,8 @@ import java.util.Date;
  */
 @Service
 public class JwtTokenService implements TokenService {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtTokenService.class);
 
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String EMAIL_CLAIM = "email";
@@ -44,6 +48,7 @@ public class JwtTokenService implements TokenService {
     @Override
     public String generateToken(User user) {
         Date now = new Date();
+        log.debug("Generating token for user id: {}", user.getId());
         return Jwts.builder()
                 .subject(String.valueOf(user.getId()))
                 .claim(EMAIL_CLAIM, user.getEmail())
@@ -82,6 +87,7 @@ public class JwtTokenService implements TokenService {
         try {
             return Jwts.parser().verifyWith(signingKey).build().parseSignedClaims(rawToken.trim()).getPayload();
         } catch (JwtException | IllegalArgumentException e) {
+            log.warn("Token validation failed: {}", e.getMessage());
             throw new InvalidCredentialsException("Invalid or expired token", e);
         }
     }

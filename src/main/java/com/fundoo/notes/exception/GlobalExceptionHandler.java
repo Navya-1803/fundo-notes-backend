@@ -3,6 +3,8 @@ package com.fundoo.notes.exception;
 import com.fundoo.notes.dto.response.ApiErrorResponseDto;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -24,6 +26,8 @@ import java.util.Map;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(DuplicateEmailException.class)
     public ResponseEntity<ApiErrorResponseDto> handleDuplicateEmail(DuplicateEmailException ex, HttpServletRequest request) {
@@ -50,6 +54,7 @@ public class GlobalExceptionHandler {
         ApiErrorResponseDto body = new ApiErrorResponseDto(HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(), "Validation failed", request.getRequestURI());
         body.setValidationErrors(errors);
+        log.warn("Validation failed on {}: {}", request.getRequestURI(), errors);
         return ResponseEntity.badRequest().body(body);
     }
 
@@ -71,10 +76,12 @@ public class GlobalExceptionHandler {
     // anything unexpected, the internal message is not exposed to the client
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponseDto> handleGeneric(Exception ex, HttpServletRequest request) {
+        log.error("Unexpected error on {} {}", request.getMethod(), request.getRequestURI(), ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "Something went wrong, please try again later", request);
     }
 
     private ResponseEntity<ApiErrorResponseDto> build(HttpStatus status, String message, HttpServletRequest request) {
+        log.warn("{} {} -> {} {}", request.getMethod(), request.getRequestURI(), status.value(), message);
         ApiErrorResponseDto body = new ApiErrorResponseDto(status.value(), status.getReasonPhrase(), message, request.getRequestURI());
         return ResponseEntity.status(status).body(body);
     }
