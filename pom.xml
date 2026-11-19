@@ -119,6 +119,12 @@
             <version>${poi.version}</version>
         </dependency>
 
+        <!-- AOP for cross cutting logging and performance measurement -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aspectj</artifactId>
+        </dependency>
+
         <!-- test dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
