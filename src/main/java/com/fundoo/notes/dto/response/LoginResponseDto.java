@@ -1,0 +1,36 @@
+package com.fundoo.notes.dto.response;
+
+/**
+ * Response of a successful login, the token is used for later requests.
+ *
+ * @author Navya Raj
+ */
+public class LoginResponseDto {
+
+    private String token;
+    private String message;
+
+    public LoginResponseDto() {
+    }
+
+    public LoginResponseDto(String token, String message) {
+        this.token = token;
+        this.message = message;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+}
