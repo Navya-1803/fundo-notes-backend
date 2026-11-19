@@ -13,20 +13,30 @@ import com.fundoo.notes.service.TokenService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Creates notes and moves them between pinned, archived and trashed states.
+ * The dashboard list of every user is cached and evicted whenever one of
+ * that user's notes changes, so the cache never shows stale data.
  *
  * @author Navya Raj
  */
 @Service
 @Transactional
 public class NoteServiceImpl implements NoteService {
+
+    // cache name and key expression shared by all cache annotations
+    public static final String NOTES_CACHE = "notes";
+    private static final String USER_KEY = "@jwtTokenService.extractUserId(#token)";
 
     private static final Logger log = LoggerFactory.getLogger(NoteServiceImpl.class);
 
@@ -41,6 +51,7 @@ public class NoteServiceImpl implements NoteService {
     }
 
     @Override
+    @CacheEvict(value = NOTES_CACHE, key = USER_KEY)
     public NoteResponseDto createNote(NoteRequestDto requestDto, String token) {
         User user = findUserFromToken(token);
         log.info("Creating note for user id: {}", user.getId());
@@ -52,15 +63,17 @@ public class NoteServiceImpl implements NoteService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = NOTES_CACHE, key = USER_KEY)
     public List<NoteResponseDto> getAllNotes(String token) {
         Long userId = findUserFromToken(token).getId();
-        log.info("Fetching notes for user id: {}", userId);
+        log.info("Fetching notes for user id: {} from database", userId);
         // pinned notes first, then the most recently created
         return noteRepository.findByUserIdAndArchivedFalseAndTrashedFalse(userId).stream()
                 .sorted(Comparator.comparing(Note::isPinned).reversed()
                         .thenComparing(Note::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(this::mapToResponse)
-                .toList();
+                // a mutable list so the cache can serialize it
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     @Override
@@ -71,6 +84,7 @@ public class NoteServiceImpl implements NoteService {
     }
 
     @Override
+    @CacheEvict(value = NOTES_CACHE, key = USER_KEY)
     public NoteResponseDto pinNote(Long noteId, String token) {
         Note note = findOwnedNote(noteId, token);
         if (note.isTrashed()) {
@@ -83,6 +97,7 @@ public class NoteServiceImpl implements NoteService {
     }
 
     @Override
+    @CacheEvict(value = NOTES_CACHE, key = USER_KEY)
     public NoteResponseDto archiveNote(Long noteId, String token) {
         Note note = findOwnedNote(noteId, token);
         if (note.isTrashed()) {
@@ -99,6 +114,7 @@ public class NoteServiceImpl implements NoteService {
     }
 
     @Override
+    @CacheEvict(value = NOTES_CACHE, key = USER_KEY)
     public NoteResponseDto trashNote(Long noteId, String token) {
         Note note = findOwnedNote(noteId, token);
         note.setTrashed(!note.isTrashed());
